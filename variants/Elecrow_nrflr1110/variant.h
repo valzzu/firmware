@@ -85,14 +85,14 @@ extern "C" {
 
 #define SPI_INTERFACES_COUNT 1
 
-#define PIN_SPI_MISO (32 + 8) // P1.08
-#define PIN_SPI_MOSI (32 + 9) // P1.09
-#define PIN_SPI_SCK (0 + 11)  // P0.11
-#define PIN_SPI_NSS (0 + 12)  // P0.12
+#define PIN_SPI_MISO (32 + 15) // P1.15
+#define PIN_SPI_MOSI (32 + 14) // P1.14
+#define PIN_SPI_SCK (32 + 13)  // P1.13
+#define PIN_SPI_NSS (1 + 12)  // P1.12
 
 #define LORA_RESET (32 + 10) // P1.10 // RST
-#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ
-#define LORA_DIO2 (0 + 7)    // P0.07 // BUSY
+//#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ
+#define LORA_DIO0 (32 + 11)    // P0.07 // BUSY
 #define LORA_SCK PIN_SPI_SCK
 #define LORA_MISO PIN_SPI_MISO
 #define LORA_MOSI PIN_SPI_MOSI
@@ -101,9 +101,9 @@ extern "C" {
 // supported modules list
 #define USE_LR1110
 
-#define LR1110_IRQ_PIN LORA_DIO1
+//#define LR1110_IRQ_PIN LORA_DIO1
 #define LR1110_NRESET_PIN LORA_RESET
-#define LR1110_BUSY_PIN LORA_DIO2
+#define LR1110_BUSY_PIN LORA_DIO0
 #define LR1110_SPI_NSS_PIN LORA_CS
 #define LR1110_SPI_SCK_PIN LORA_SCK
 #define LR1110_SPI_MOSI_PIN LORA_MOSI
