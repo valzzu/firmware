@@ -20,9 +20,9 @@
 #define _VARIANT_ELECROW_NRFLR1110_
 
 /** Master clock frequency */
-#define VARIANT_MCK (64000000ul)
+#define VARIANT_MCK (64000000ul) //elecrow???
 
-#define USE_LFXO // Board uses 32khz crystal for LF
+ #define USE_LFXO // Board uses 32khz crystal for LF  //Does elecrow use????????
 
 /*----------------------------------------------------------------------------
  *        Headers
