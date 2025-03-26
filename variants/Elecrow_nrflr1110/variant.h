@@ -46,16 +46,16 @@ extern "C" {
 #define PIN_3V3_EN (32 + 6)     // P1.6, Power to Sensors
 #define PIN_3V3_ACC_EN (32 + 7) // P1.7, Power to Acc
 
-#define PIN_LED1 (0 + 24) // P0.24
-#define LED_PIN PIN_LED1
-#define LED_BUILTIN -1
-#define LED_BLUE -1    // Actually green
+// LED
+#define PIN_LED1 (0 + 15) // P0.15
+#define LED_BUILTIN PIN_LED1
+// Actually red
+#define LED_BLUE PIN_LED1
 #define LED_STATE_ON 1 // State when LED is lit
 
-#define BUTTON_PIN (0 + 6) // P0.06
-#define BUTTON_ACTIVE_LOW false
-#define BUTTON_ACTIVE_PULLUP false
-#define BUTTON_SENSE_TYPE 0x5 // enable input pull-down
+
+// Button
+#define BUTTON_PIN (32 + 0) // P1.00
 
 #define HAS_WIRE 1
 
@@ -63,7 +63,6 @@ extern "C" {
 
 #define PIN_WIRE_SDA (32 + 4)      // P1.04
 #define PIN_WIRE_SCL (32 + 2)      // P1.27
-//#define I2C_NO_RESCAN              // I2C is a bit finicky, don't scan too much
 
 /*
  * Serial interfaces
