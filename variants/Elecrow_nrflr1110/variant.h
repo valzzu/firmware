@@ -101,7 +101,7 @@ extern "C" {
 
 // Lora
 #define LORA_RESET (32 + 10) // P1.10 // RST
-//#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ
+//#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ ???????
 #define LORA_DIO0 (32 + 11)    // P0.07 // BUSY
 #define LORA_SCK PIN_SPI_SCK
 #define LORA_MISO PIN_SPI_MISO
