@@ -83,12 +83,22 @@ extern "C" {
 //#define PIN_SERIAL2_RX (0 + 17) // P0.17
 //#define PIN_SERIAL2_TX (0 + 16) // P0.16
 
-#define SPI_INTERFACES_COUNT 1
+#define SPI_INTERFACES_COUNT 2
 
 #define PIN_SPI_MISO (32 + 15) // P1.15
 #define PIN_SPI_MOSI (32 + 14) // P1.14
 #define PIN_SPI_SCK (32 + 13)  // P1.13
 #define PIN_SPI_NSS (1 + 12)  // P1.12
+
+
+// #define HAS_SDCARD
+#define PIN_SPI1_MOSI (0 + 2) //P0.3
+#define PIN_SPI1_SCK (0 + 28) //P0.28
+#define PIN_SPI1_MISO (0 + 30)  //P0.30
+#define PIN_SPI1_CS (0 + 2) //P0.02
+#define SDCARD_CS PIN_SPI_CS
+//#define SD_SPI_FREQUENCY 75000000U 
+
 
 #define LORA_RESET (32 + 10) // P1.10 // RST
 //#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ
