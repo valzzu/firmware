@@ -43,8 +43,8 @@ extern "C" {
 // Use the native nrf52 usb power detection
 #define NRF_APM
 
-#define PIN_3V3_EN (32 + 6)     // P1.6, Power to Sensors
-#define PIN_3V3_ACC_EN (32 + 7) // P1.7, Power to Acc
+//#define PIN_3V3_EN (32 + 6)     // P1.6, Power to Sensors
+//#define PIN_3V3_ACC_EN (32 + 7) // P1.7, Power to Acc
 
 // LED
 #define PIN_LED1 (0 + 15) // P0.15
@@ -80,8 +80,8 @@ extern "C" {
 #define PIN_SERIAL1_RX PIN_GPS_RX 
 #define PIN_SERIAL1_TX PIN_GPS_TX 
 
-#define PIN_SERIAL2_RX (0 + 17) // P0.17
-#define PIN_SERIAL2_TX (0 + 16) // P0.16
+//#define PIN_SERIAL2_RX (0 + 17) // P0.17
+//#define PIN_SERIAL2_TX (0 + 16) // P0.16
 
 #define SPI_INTERFACES_COUNT 1
 
@@ -112,14 +112,6 @@ extern "C" {
 #define LR11X0_DIO3_TCXO_VOLTAGE 1.6
 #define LR11X0_DIO_AS_RF_SWITCH
 
-#define HAS_GPS 1
-#define GNSS_AIROHA
-#define GPS_RX_PIN PIN_SERIAL1_RX
-#define GPS_TX_PIN PIN_SERIAL1_TX
-
-#define GPS_BAUDRATE 115200
-
-#define GPS_FIX_HOLD_TIME 15000 // ms
 #define BATTERY_PIN (0 + 31)           // P0.31
 #define BATTERY_IMMUTABLE
 #define ADC_MULTIPLIER (2.0F)
