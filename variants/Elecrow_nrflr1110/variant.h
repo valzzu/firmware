@@ -99,7 +99,7 @@ extern "C" {
 #define SDCARD_CS PIN_SPI_CS
 //#define SD_SPI_FREQUENCY 75000000U 
 
-
+// Lora
 #define LORA_RESET (32 + 10) // P1.10 // RST
 //#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ
 #define LORA_DIO0 (32 + 11)    // P0.07 // BUSY
