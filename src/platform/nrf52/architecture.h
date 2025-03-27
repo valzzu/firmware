@@ -77,6 +77,8 @@
 #define HW_VENDOR meshtastic_HardwareModel_HELTEC_MESH_NODE_T114
 #elif defined(SEEED_XIAO_NRF52840_KIT)
 #define HW_VENDOR meshtastic_HardwareModel_XIAO_NRF52_KIT
+#elif defined(ELECROW_NRFLR1110)
+#define HW_VENDOR meshtastic_HardwareModel_ELECROW_NRFLR1110
 #else
 #define HW_VENDOR meshtastic_HardwareModel_NRF52_UNKNOWN
 #endif

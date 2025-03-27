@@ -73,8 +73,6 @@ extern "C" {
 #define PIN_GPS_RX (0 + 20) // P0.20
 
 #define PIN_GPS_EN (0 + 24) // P0.24
-#define GPS_POWER_TOGGLE
-#define GPS_UBLOX
 // define GPS_DEBUG
 
 #define PIN_SERIAL1_RX PIN_GPS_RX 
@@ -101,7 +99,7 @@ extern "C" {
 
 // Lora
 #define LORA_RESET (32 + 10) // P1.10 // RST
-//#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ ???????
+#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ ???????
 #define LORA_DIO0 (32 + 11)    // P0.07 // BUSY
 #define LORA_SCK PIN_SPI_SCK
 #define LORA_MISO PIN_SPI_MISO
@@ -111,7 +109,7 @@ extern "C" {
 // supported modules list
 #define USE_LR1110
 
-//#define LR1110_IRQ_PIN LORA_DIO1
+#define LR1110_IRQ_PIN LORA_DIO1
 #define LR1110_NRESET_PIN LORA_RESET
 #define LR1110_BUSY_PIN LORA_DIO0
 #define LR1110_SPI_NSS_PIN LORA_CS
