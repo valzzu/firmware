@@ -1,6 +1,6 @@
 /*
   Copyright (c) 2014-2015 Arduino LLC.  All right reserved.
-  Copyright (c) 2016 Sandeep Mistry All right reserved.
+  Copyright (c) 2016 Sandeep Mistry All right reserved.d
   Copyright (c) 2018, Adafruit Industries (adafruit.com)
 
   This library is free software; you can redistribute it and/or
@@ -72,14 +72,16 @@ extern "C" {
 #define PIN_GPS_TX (0 + 22) // P0.22
 #define PIN_GPS_RX (0 + 20) // P0.20
 
+#define HAS_GPS 1
 #define PIN_GPS_EN (0 + 24) // P0.24
 // define GPS_DEBUG
 
 #define PIN_SERIAL1_RX PIN_GPS_RX 
 #define PIN_SERIAL1_TX PIN_GPS_TX 
 
-//#define PIN_SERIAL2_RX (0 + 17) // P0.17
-//#define PIN_SERIAL2_TX (0 + 16) // P0.16
+// not used on the board but doesent compile without these
+#define PIN_SERIAL2_RX (0 + 17) // P0.17 
+#define PIN_SERIAL2_TX (0 + 16) // P0.16
 
 #define SPI_INTERFACES_COUNT 2
 
