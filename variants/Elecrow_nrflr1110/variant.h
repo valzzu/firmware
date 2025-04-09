@@ -99,10 +99,16 @@ extern "C" {
 #define SDCARD_CS PIN_SPI_CS
 //#define SD_SPI_FREQUENCY 75000000U 
 
-// Lora
-#define LORA_RESET (32 + 10) // P1.10 // RST
-#define LORA_DIO1 (32 + 1)   // P1.01 // IRQ ???????
-#define LORA_DIO0 (32 + 11)    // P0.07 // BUSY
+#define SPI_INTERFACES_COUNT 1
+
+#define PIN_SPI_MISO (32 + 15)
+#define PIN_SPI_MOSI (32 + 14)
+#define PIN_SPI_SCK  (32 + 13)
+#define PIN_SPI_NSS  (32 + 12)
+
+#define LORA_RESET (32 + 10)
+#define LORA_DIO1 (40)
+#define LORA_DIO2 (43)
 #define LORA_SCK PIN_SPI_SCK
 #define LORA_MISO PIN_SPI_MISO
 #define LORA_MOSI PIN_SPI_MOSI
@@ -113,7 +119,7 @@ extern "C" {
 
 #define LR1110_IRQ_PIN LORA_DIO1
 #define LR1110_NRESET_PIN LORA_RESET
-#define LR1110_BUSY_PIN LORA_DIO0
+#define LR1110_BUSY_PIN LORA_DIO2
 #define LR1110_SPI_NSS_PIN LORA_CS
 #define LR1110_SPI_SCK_PIN LORA_SCK
 #define LR1110_SPI_MOSI_PIN LORA_MOSI
