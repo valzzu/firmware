@@ -80,15 +80,15 @@ extern "C" {
 #define PIN_SERIAL1_TX PIN_GPS_TX 
 
 // not used on the board but doesent compile without these
-#define PIN_SERIAL2_RX (0 + 17) // P0.17 
-#define PIN_SERIAL2_TX (0 + 16) // P0.16
+#define PIN_SERIAL2_RX (32 + 9) // P1.09 
+#define PIN_SERIAL2_TX (0 + 8) // P0.08
 
 #define SPI_INTERFACES_COUNT 2
 
 #define PIN_SPI_MISO (32 + 15) // P1.15
 #define PIN_SPI_MOSI (32 + 14) // P1.14
 #define PIN_SPI_SCK (32 + 13)  // P1.13
-#define PIN_SPI_NSS (1 + 12)  // P1.12
+#define PIN_SPI_NSS (32 + 12)  // P1.12
 
 
 // #define HAS_SDCARD
@@ -98,8 +98,6 @@ extern "C" {
 #define PIN_SPI1_CS (0 + 2) //P0.02
 #define SDCARD_CS PIN_SPI_CS
 //#define SD_SPI_FREQUENCY 75000000U 
-
-#define SPI_INTERFACES_COUNT 1
 
 #define PIN_SPI_MISO (32 + 15)
 #define PIN_SPI_MOSI (32 + 14)
@@ -127,6 +125,8 @@ extern "C" {
 
 #define LR11X0_DIO3_TCXO_VOLTAGE 1.6
 #define LR11X0_DIO_AS_RF_SWITCH
+
+#define SX126X_TXEN (0 + 17) // P0.17
 
 #define BATTERY_PIN (0 + 31)           // P0.31
 #define BATTERY_IMMUTABLE
