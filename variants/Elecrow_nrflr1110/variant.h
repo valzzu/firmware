@@ -87,12 +87,13 @@ extern "C" {
 #define SPI_INTERFACES_COUNT 2
 
 
-#define HAS_SDCARD
+//#define HAS_SDCARD
+#define SDCARD_USE_SPI1
 #define PIN_SPI1_MOSI (0 + 2) //P0.3
 #define PIN_SPI1_SCK (0 + 28) //P0.28
 #define PIN_SPI1_MISO (0 + 30)  //P0.30
 #define PIN_SPI1_CS (0 + 2) //P0.02
-#define SDCARD_CS PIN_SPI_CS
+#define SDCARD_CS PIN_SPI1_CS
 //#define SD_SPI_FREQUENCY 75000000U 
 
 #define PIN_SPI_MISO (32 + 15)
@@ -118,7 +119,7 @@ extern "C" {
 #define LR11X0_DIO3_TCXO_VOLTAGE 1.6
 #define LR11X0_DIO_AS_RF_SWITCH
 
-// #define SX126X_TXEN (0 + 17) // P0.17
+#define SX126X_TXEN (0 + 17) // P0.17
 
 #define BATTERY_PIN (0 + 31)           // P0.31
 #define BATTERY_IMMUTABLE
