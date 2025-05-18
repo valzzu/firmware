@@ -70,8 +70,8 @@ extern "C" {
  */
 
  // GPS
-#define PIN_GPS_TX (0 + 22) // P0.22
-#define PIN_GPS_RX (0 + 20) // P0.20
+#define PIN_GPS_TX (0 + 20) // P0.22
+#define PIN_GPS_RX (0 + 22) // P0.20
 
 #define HAS_GPS 1
 #define PIN_GPS_EN (0 + 24) // P0.24
@@ -86,13 +86,8 @@ extern "C" {
 
 #define SPI_INTERFACES_COUNT 2
 
-#define PIN_SPI_MISO (32 + 15) // P1.15
-#define PIN_SPI_MOSI (32 + 14) // P1.14
-#define PIN_SPI_SCK (32 + 13)  // P1.13
-#define PIN_SPI_NSS (32 + 12)  // P1.12
 
-
-// #define HAS_SDCARD
+#define HAS_SDCARD
 #define PIN_SPI1_MOSI (0 + 2) //P0.3
 #define PIN_SPI1_SCK (0 + 28) //P0.28
 #define PIN_SPI1_MISO (0 + 30)  //P0.30
@@ -106,12 +101,8 @@ extern "C" {
 #define PIN_SPI_NSS  (32 + 12)
 
 #define LORA_RESET (32 + 10)
-#define LORA_DIO1 (40)
-#define LORA_DIO2 (43)
-#define LORA_SCK PIN_SPI_SCK
-#define LORA_MISO PIN_SPI_MISO
-#define LORA_MOSI PIN_SPI_MOSI
-#define LORA_CS PIN_SPI_NSS
+#define LORA_DIO1 (32 + 8) 
+#define LORA_DIO2 (32 + 11)
 
 // supported modules list
 #define USE_LR1110
@@ -119,15 +110,15 @@ extern "C" {
 #define LR1110_IRQ_PIN LORA_DIO1
 #define LR1110_NRESET_PIN LORA_RESET
 #define LR1110_BUSY_PIN LORA_DIO2
-#define LR1110_SPI_NSS_PIN LORA_CS
-#define LR1110_SPI_SCK_PIN LORA_SCK
-#define LR1110_SPI_MOSI_PIN LORA_MOSI
-#define LR1110_SPI_MISO_PIN LORA_MISO
+#define LR1110_SPI_NSS_PIN PIN_SPI_NSS
+#define LR1110_SPI_SCK_PIN PIN_SPI_SCK
+#define LR1110_SPI_MOSI_PIN PIN_SPI_MOSI
+#define LR1110_SPI_MISO_PIN PIN_SPI_MISO
 
 #define LR11X0_DIO3_TCXO_VOLTAGE 1.6
 #define LR11X0_DIO_AS_RF_SWITCH
 
-#define SX126X_TXEN (0 + 17) // P0.17
+// #define SX126X_TXEN (0 + 17) // P0.17
 
 #define BATTERY_PIN (0 + 31)           // P0.31
 #define BATTERY_IMMUTABLE
@@ -148,4 +139,4 @@ extern "C" {
  *        Arduino objects - C++ only
  *----------------------------------------------------------------------------*/
 
-#endif // _VARIANT_TRACKER_T1000_E_
+#endif // _VARIANT_ELECROW_NRFLR1110_
