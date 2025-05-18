@@ -22,7 +22,8 @@
 /** Master clock frequency */
 #define VARIANT_MCK (64000000ul) //elecrow???
 
- #define USE_LFXO // Board uses 32khz crystal for LF  //Does elecrow use????????
+// #define USE_LFXO // Board uses 32khz crystal for LF
+#define USE_LFRC // Board uses RC for LF
 
 /*----------------------------------------------------------------------------
  *        Headers
