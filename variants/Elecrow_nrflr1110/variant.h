@@ -101,16 +101,13 @@ extern "C" {
 #define PIN_SPI_SCK  (32 + 13)
 #define PIN_SPI_NSS  (32 + 12)
 
-#define LORA_RESET (32 + 10)
-#define LORA_DIO1 (32 + 8) 
-#define LORA_DIO2 (32 + 11)
 
 // supported modules list
 #define USE_LR1110
 
-#define LR1110_IRQ_PIN LORA_DIO1
-#define LR1110_NRESET_PIN LORA_RESET
-#define LR1110_BUSY_PIN LORA_DIO2
+#define LR1110_IRQ_PIN (32 + 8) 
+#define LR1110_NRESET_PIN (32 + 10)
+#define LR1110_BUSY_PIN (32 + 11)
 #define LR1110_SPI_NSS_PIN PIN_SPI_NSS
 #define LR1110_SPI_SCK_PIN PIN_SPI_SCK
 #define LR1110_SPI_MOSI_PIN PIN_SPI_MOSI
