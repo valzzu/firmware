@@ -39,9 +39,9 @@ template <typename T, std::size_t N> std::size_t array_count(const T (&)[N])
     return N;
 }
 
-#if defined(NRF52840_XXAA) || defined(NRF52833_XXAA) || defined(ARCH_ESP32) || defined(ARCH_PORTDUINO)
-#if defined(RAK2560)
-HardwareSerial *GPS::_serial_gps = &Serial2;
+#if defined(NRF52840_XXAA) || defined(NRF52833_XXAA) || defined(ARCH_ESP32) || defined(ARCH_PORTDUINO) || defined(ARCH_STM32WL)
+#if defined(GPS_SERIAL_PORT)
+HardwareSerial *GPS::_serial_gps = &GPS_SERIAL_PORT;
 #else
 HardwareSerial *GPS::_serial_gps = &Serial1;
 #endif
@@ -570,6 +570,19 @@ bool GPS::setup()
             // Switch to Fitness Mode, for running and walking purpose with low speed (<5 m/s)
             _serial_gps->write("$PMTK886,1*29\r\n");
             delay(250);
+        } else if (gnssModel == GNSS_MODEL_MTK_PA1010D) {
+            // PA1010D is used in the Pimoroni GPS board.
+
+            // Enable all constellations.
+            _serial_gps->write("$PMTK353,1,1,1,1,1*2A\r\n");
+            // Above command will reset the GPS and takes longer before it will accept new commands
+            delay(1000);
+            // Only ask for RMC and GGA (GNRMC and GNGGA)
+            _serial_gps->write("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n");
+            delay(250);
+            // Enable SBAS / WAAS
+            _serial_gps->write("$PMTK301,2*2E\r\n");
+            delay(250);
         } else if (gnssModel == GNSS_MODEL_MTK_PA1616S) {
             // PA1616S is used in some GPS breakout boards from Adafruit
             // PA1616S does not have GLONASS capability. PA1616D does, but is not implemented here.
@@ -630,8 +643,16 @@ bool GPS::setup()
             delay(250);
         } else if (IS_ONE_OF(gnssModel, GNSS_MODEL_AG3335, GNSS_MODEL_AG3352)) {
 
-            _serial_gps->write("$PAIR066,1,0,1,0,0,1*3B\r\n"); // Enable GPS+GALILEO+NAVIC
-
+            if (config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_IN ||
+                config.lora.region == meshtastic_Config_LoRaConfig_RegionCode_NP_865) {
+                _serial_gps->write("$PAIR066,1,0,1,0,0,1*3B\r\n"); // Enable GPS+GALILEO+NAVIC
+                // GPS GLONASS GALILEO BDS QZSS NAVIC
+                //  1    0       1      0   0    1
+            } else {
+                _serial_gps->write("$PAIR066,1,1,1,1,0,0*3A\r\n"); // Enable GPS+GLONASS+GALILEO+BDS
+                // GPS GLONASS GALILEO BDS QZSS NAVIC
+                //  1    1       1      1   0    0
+            }
             // Configure NMEA (sentences will output once per fix)
             _serial_gps->write("$PAIR062,0,1*3F\r\n"); // GGA ON
             _serial_gps->write("$PAIR062,1,0*3F\r\n"); // GLL OFF
@@ -810,13 +831,6 @@ void GPS::setPowerState(GPSPowerState newState, uint32_t sleepTime)
     powerState = newState;
     LOG_INFO("GPS power state move from %s to %s", getGPSPowerStateString(oldState), getGPSPowerStateString(newState));
 
-#ifdef HELTEC_MESH_NODE_T114
-    if ((oldState == GPS_OFF || oldState == GPS_HARDSLEEP) && (newState != GPS_OFF && newState != GPS_HARDSLEEP)) {
-        _serial_gps->begin(serialSpeeds[speedSelect]);
-    } else if ((newState == GPS_OFF || newState == GPS_HARDSLEEP) && (oldState != GPS_OFF && oldState != GPS_HARDSLEEP)) {
-        _serial_gps->end();
-    }
-#endif
     switch (newState) {
     case GPS_ACTIVE:
     case GPS_IDLE:
@@ -1244,10 +1258,11 @@ GnssModel_t GPS::probe(int serialSpeed)
     // Close all NMEA sentences, valid for MTK3333 and MTK3339 platforms
     _serial_gps->write("$PMTK514,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*2E\r\n");
     delay(20);
-    std::vector<ChipInfo> mtk = {{"L76B", "Quectel-L76B", GNSS_MODEL_MTK_L76B},
-                                 {"PA1616S", "1616S", GNSS_MODEL_MTK_PA1616S},
-                                 {"LS20031", "MC-1513", GNSS_MODEL_MTK_L76B},
-                                 {"L96", "Quectel-L96", GNSS_MODEL_MTK_L76B}};
+    std::vector<ChipInfo> mtk = {{"L76B", "Quectel-L76B", GNSS_MODEL_MTK_L76B}, {"PA1010D", "1010D", GNSS_MODEL_MTK_PA1010D},
+                                 {"PA1616S", "1616S", GNSS_MODEL_MTK_PA1616S},  {"LS20031", "MC-1513", GNSS_MODEL_MTK_L76B},
+                                 {"L96", "Quectel-L96", GNSS_MODEL_MTK_L76B},   {"L80-R", "_3337_", GNSS_MODEL_MTK_L76B},
+                                 {"L80", "_3339_", GNSS_MODEL_MTK_L76B}};
+
     PROBE_FAMILY("MTK Family", "$PMTK605*31", mtk, 500);
 
     uint8_t cfg_rate[] = {0xB5, 0x62, 0x06, 0x08, 0x00, 0x00, 0x00, 0x00};
@@ -1529,7 +1544,10 @@ The Unix epoch (or Unix time or POSIX time or Unix timestamp) is the number of s
         if (t.tm_mon > -1) {
             LOG_DEBUG("NMEA GPS time %02d-%02d-%02d %02d:%02d:%02d age %d", d.year(), d.month(), t.tm_mday, t.tm_hour, t.tm_min,
                       t.tm_sec, ti.age());
-            perhapsSetRTC(RTCQualityGPS, t);
+            if (perhapsSetRTC(RTCQualityGPS, t) == RTCSetResultInvalidTime) {
+                // Clear the GPS buffer if we got an invalid time
+                clearBuffer();
+            }
             return true;
         } else
             return false;

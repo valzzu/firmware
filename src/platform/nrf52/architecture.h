@@ -49,6 +49,10 @@
 #define HW_VENDOR meshtastic_HardwareModel_RAK2560
 #elif defined(WISMESH_TAP)
 #define HW_VENDOR meshtastic_HardwareModel_WISMESH_TAP
+#elif defined(WISMESH_TAG)
+#define HW_VENDOR meshtastic_HardwareModel_WISMESH_TAG
+#elif defined(GAT562_MESH_TRIAL_TRACKER)
+#define HW_VENDOR meshtastic_HardwareModel_GAT562_MESH_TRIAL_TRACKER
 #elif defined(RAK4630)
 #define HW_VENDOR meshtastic_HardwareModel_RAK4631
 #elif defined(TTGO_T_ECHO)
@@ -81,8 +85,16 @@
 #define HW_VENDOR meshtastic_HardwareModel_MESHLINK
 #elif defined(SEEED_XIAO_NRF52840_KIT)
 #define HW_VENDOR meshtastic_HardwareModel_XIAO_NRF52_KIT
-#elif defined(ELECROW_NRFLR1110)
-#define HW_VENDOR meshtastic_HardwareModel_ELECROW_NRFLR1110
+#elif defined(SEEED_SOLAR_NODE)
+#define HW_VENDOR meshtastic_HardwareModel_SEEED_SOLAR_NODE
+#elif defined(HELTEC_MESH_POCKET)
+#define HW_VENDOR meshtastic_HardwareModel_HELTEC_MESH_POCKET
+#elif defined(NOMADSTAR_METEOR_PRO)
+#define HW_VENDOR meshtastic_HardwareModel_NOMADSTAR_METEOR_PRO
+#elif defined(SEEED_WIO_TRACKER_L1_EINK)
+#define HW_VENDOR meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1_EINK
+#elif defined(SEEED_WIO_TRACKER_L1)
+#define HW_VENDOR meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1
 #else
 #define HW_VENDOR meshtastic_HardwareModel_NRF52_UNKNOWN
 #endif
@@ -111,10 +123,6 @@
 
 #ifdef PIN_BUTTON1
 #define BUTTON_PIN PIN_BUTTON1
-#endif
-
-#ifdef PIN_BUTTON2
-#define BUTTON_PIN_ALT PIN_BUTTON2
 #endif
 
 #ifdef PIN_BUTTON_TOUCH
