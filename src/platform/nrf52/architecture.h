@@ -95,6 +95,8 @@
 #define HW_VENDOR meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1_EINK
 #elif defined(SEEED_WIO_TRACKER_L1)
 #define HW_VENDOR meshtastic_HardwareModel_SEEED_WIO_TRACKER_L1
+#elif defined(ELECROW_NRFLR1110)
+#define HW_VENDOR meshtastic_HardwareModel_ELECROW_NRFLR1110
 #else
 #define HW_VENDOR meshtastic_HardwareModel_NRF52_UNKNOWN
 #endif
