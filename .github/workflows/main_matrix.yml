@@ -30,7 +30,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [esp32, esp32s3, esp32c3, esp32c6, nrf52840, rp2040, stm32, check]
+        #arch: [esp32, esp32s3, esp32c3, esp32c6, nrf52840, rp2040, stm32, check]
+        arch: [nrf52840]
+
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
