@@ -17,21 +17,29 @@ on:
           - native
       target:
         type: string
+        required: false
+        description: 'choose the target board, e.g. nrf52_promicro_diy_tcxo. If blank, will find available targets.'
+
+      # find-target:
+      #   type: boolean
+      #   default: true
+      #   description: 'Find the available targets'
 jobs:
-  setup:
+  find-targets:
+    if: ${{ inputs.target == '' }}
     strategy:
       fail-fast: false
-      # matrix:
-      #   arch:
-      #     - esp32
-      #     - esp32s3
-      #     - esp32c3
-      #     - esp32c6
-      #     - nrf52840
-      #     - rp2040
-      #     - rp2350
-      #     - stm32
-      #     - check
+      matrix:
+        arch:
+          - esp32
+          - esp32s3
+          - esp32c3
+          - esp32c6
+          - nrf52840
+          - rp2040
+          - rp2350
+          - stm32
+
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -43,25 +51,20 @@ jobs:
       - name: Generate matrix
         id: jsonStep
         run: |
-          if [[ "$GITHUB_HEAD_REF" == "" ]]; then
-            TARGETS=$(./bin/generate_ci_matrix.py ${{inputs.arch}} extra)
-          else  
-            TARGETS=$(./bin/generate_ci_matrix.py ${{inputs.arch}} pr)
-          fi
-          echo "Name: $GITHUB_REF_NAME Base: $GITHUB_BASE_REF Ref: $GITHUB_REF Targets: $TARGETS"
-          echo "${{inputs.arch}}=$(jq -cn --argjson environments "$TARGETS" ${{ inputs.target }} )" >> $GITHUB_OUTPUT
-    outputs:
-      esp32: ${{ steps.jsonStep.outputs.esp32 }}
-      esp32s3: ${{ steps.jsonStep.outputs.esp32s3 }}
-      esp32c3: ${{ steps.jsonStep.outputs.esp32c3 }}
-      esp32c6: ${{ steps.jsonStep.outputs.esp32c6 }}
-      nrf52840: ${{ steps.jsonStep.outputs.nrf52840 }}
-      rp2040: ${{ steps.jsonStep.outputs.rp2040 }}
-      rp2350: ${{ steps.jsonStep.outputs.rp2350 }}
-      stm32: ${{ steps.jsonStep.outputs.stm32 }}
-      check: ${{ steps.jsonStep.outputs.check }}
+          TARGETS=$(./bin/generate_ci_matrix.py ${{matrix.arch}} extra)
+          echo "Name: $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "Base: $GITHUB_BASE_REF" >> $GITHUB_STEP_SUMMARY
+          echo "Arch: ${{matrix.arch}}" >> $GITHUB_STEP_SUMMARY
+          echo "Ref: $GITHUB_REF" >> $GITHUB_STEP_SUMMARY
+          echo "Targets:" >> $GITHUB_STEP_SUMMARY
+          echo $TARGETS | sed 's/[][]//g; s/", "/\n- /g; s/"//g; s/^/- /' >> $GITHUB_STEP_SUMMARY
+
+
+
+
 
   version:
+    if: ${{ inputs.target != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,104 +79,19 @@ jobs:
       long: ${{ steps.version.outputs.long }}
       deb: ${{ steps.version.outputs.deb }}
 
-  build-esp32:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'esp32'}}
-    needs: [setup, version]
+  build-arch:
+    if: ${{ inputs.target != '' && inputs.arch != 'native' }}
+    needs: [version]
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.esp32) }}
     uses: ./.github/workflows/build_firmware.yml
     with:
       version: ${{ needs.version.outputs.long }}
       pio_env: ${{ inputs.target }}
-      platform: esp32
-
-  build-esp32s3:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'esp32s3'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.esp32s3) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: esp32s3
-
-  build-esp32c3:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'esp32c3'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.esp32c3) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: esp32c3
-
-  build-esp32c6:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'esp32c6'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.esp32c6) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: esp32c6
-
-  build-nrf52840:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'nrf52840'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-    #   matrix: ${{ fromJson(needs.setup.outputs.nrf52840) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: nrf52840
-
-  build-rp2040:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'rp2040'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.rp2040) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: rp2040
-
-  build-rp2350:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'rp2350'}}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.rp2350) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: rp2350
-
-  build-stm32:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'stm32' }}
-    needs: [setup, version]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.setup.outputs.stm32) }}
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: stm32
+      platform: ${{ inputs.arch }}
 
   build-debian-src:
-    if: ${{ github.repository == 'meshtastic/firmware' && github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ github.repository == 'meshtastic/firmware' && inputs.arch == 'native' }}
     uses: ./.github/workflows/build_debian_src.yml
     with:
       series: UNRELEASED
@@ -188,11 +106,11 @@ jobs:
     secrets: inherit
 
   test-native:
-    if: ${{ !contains(github.ref_name, 'event/') && github.event_name != 'workflow_dispatch' ||  !contains(github.ref_name, 'event/') && inputs.arch == 'native' }}
+    if: ${{ !contains(github.ref_name, 'event/') && github.event_name != 'workflow_dispatch' ||  !contains(github.ref_name, 'event/') && inputs.arch == 'native' && inputs.target != '' }}
     uses: ./.github/workflows/test_native.yml
 
   docker-deb-amd64:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: debian
@@ -201,7 +119,7 @@ jobs:
       push: false
 
   docker-deb-amd64-tft:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: debian
@@ -211,7 +129,7 @@ jobs:
       pio_env: native-tft
 
   docker-alp-amd64:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: alpine
@@ -220,7 +138,7 @@ jobs:
       push: false
 
   docker-alp-amd64-tft:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: alpine
@@ -230,7 +148,7 @@ jobs:
       pio_env: native-tft
 
   docker-deb-arm64:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: debian
@@ -239,7 +157,7 @@ jobs:
       push: false
 
   docker-deb-armv7:
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.arch == 'native' }}
+    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
     uses: ./.github/workflows/docker_build.yml
     with:
       distro: debian
@@ -253,28 +171,11 @@ jobs:
       pull-requests: write
     strategy:
       fail-fast: false
-      matrix:
-        arch:
-          - esp32
-          - esp32s3
-          - esp32c3
-          - esp32c6
-          - nrf52840
-          - rp2040
-          - rp2350
-          - stm32
     runs-on: ubuntu-latest
     needs:
       [
         version,
-        build-esp32,
-        build-esp32s3,
-        build-esp32c3,
-        build-esp32c6,
-        build-nrf52840,
-        build-rp2040,
-        build-rp2350,
-        build-stm32,
+        build-arch,
       ]
     steps:
       - name: Checkout code
@@ -347,7 +248,7 @@ jobs:
 
   release-artifacts:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.target != ''}}
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     needs:
@@ -411,18 +312,8 @@ jobs:
   release-firmware:
     strategy:
       fail-fast: false
-      matrix:
-        arch:
-          - esp32
-          - esp32s3
-          - esp32c3
-          - esp32c6
-          - nrf52840
-          - rp2040
-          - rp2350
-          - stm32
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.target != ''}}
     needs: [release-artifacts, version]
     steps:
       - name: Checkout
@@ -474,7 +365,7 @@ jobs:
 
   publish-firmware:
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'meshtastic/firmware'}}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'meshtastic/firmware' && inputs.target != '' }}
     needs: [release-firmware, version]
     env:
       targets: |-
