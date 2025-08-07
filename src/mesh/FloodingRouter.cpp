@@ -70,6 +70,7 @@ void FloodingRouter::perhapsRebroadcast(const meshtastic_MeshPacket *p)
             if (isRebroadcaster()) {
                 meshtastic_MeshPacket *tosend = packetPool.allocCopy(*p); // keep a copy because we will be sending it
 
+                tosend->hop_limit += 2;
                 tosend->hop_limit--; // bump down the hop count
 #if USERPREFS_EVENT_MODE
                 if (tosend->hop_limit > 2) {
