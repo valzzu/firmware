@@ -304,7 +304,6 @@ void setup()
     Wire.begin(48, 47);
     io.pinMode(PCA_PIN_EINK_EN, OUTPUT);
     io.pinMode(PCA_PIN_POWER_EN, OUTPUT);
-    io.digitalWrite(PCA_PIN_EINK_EN, HIGH);
     io.digitalWrite(PCA_PIN_POWER_EN, HIGH);
     // io.pinMode(C2_PIN, OUTPUT);
 #endif
@@ -326,7 +325,11 @@ void setup()
 
 #ifdef BLE_LED
     pinMode(BLE_LED, OUTPUT);
+#ifdef BLE_LED_INVERTED
+    digitalWrite(BLE_LED, HIGH);
+#else
     digitalWrite(BLE_LED, LOW);
+#endif
 #endif
 
 #if defined(T_DECK)
@@ -774,16 +777,7 @@ void setup()
 
 #if defined(USE_SH1107_128_64)
     screen_model = meshtastic_Config_DisplayConfig_OledType_OLED_SH1107; // keep dimension of 128x64
-    screen_geometry = GEOMETRY_128_64;
 #endif
-
-    // if we have one of the fixed overrides in the settings, adjust display type accordingly.
-    if (screen_model == meshtastic_Config_DisplayConfig_OledType_OLED_SH1107) {
-        screen_geometry = GEOMETRY_128_128;
-    } else if (screen_model == meshtastic_Config_DisplayConfig_OledType_OLED_SH1107_128_64) {
-        screen_model = meshtastic_Config_DisplayConfig_OledType_OLED_SH1107;
-        screen_geometry = GEOMETRY_128_64;
-    }
 
 #if !MESHTASTIC_EXCLUDE_I2C
 #if !defined(ARCH_STM32WL)
@@ -830,7 +824,7 @@ void setup()
 #elif !defined(ARCH_ESP32) // ARCH_RP2040
     SPI.begin();
 #else
-    // ESP32
+        // ESP32
 #if defined(HW_SPI1_DEVICE)
     SPI1.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
     LOG_DEBUG("SPI1.begin(SCK=%d, MISO=%d, MOSI=%d, NSS=%d)", LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
