@@ -1,39 +1,29 @@
-name: Merge Queue
-# Not sure how concurrency works in merge_queue, removing for now.
-# concurrency:
-#   group: merge-queue-${{ github.head_ref || github.run_id }}
-#   cancel-in-progress: true
+name: CI
+concurrency:
+  group: ci-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 on:
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
-  # Merge group is a special trigger that is used to trigger the workflow when a merge group is created.
-  merge_group:
-=======
-  workflow_dispatch:
-    inputs:
-      # trunk-ignore(checkov/CKV_GHA_7)
-      arch:
-        type: choice
-        options:
-          - esp32
-          - esp32s3
-          - esp32c3
-          - esp32c6
-          - nrf52840
-          - rp2040
-          - rp2350
-          - stm32
-          - native
-      target:
-        type: string
-        required: false
-        description: Choose the target board, e.g. nrf52_promicro_diy_tcxo. If blank, will find available targets.
-      # find-target:
-      #   type: boolean
-      #   default: true
-      #   description: 'Find the available targets'
+  # # Triggers the workflow on push but only for the main branches
+  push:
+    branches:
+      - master
+      - develop
+      - event/*
+    paths-ignore:
+      - "**.md"
+      - version.properties
 
-permissions: read-all
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
+  # Note: This is different from "pull_request". Need to specify ref when doing checkouts.
+  pull_request_target:
+    branches:
+      - master
+      - develop
+      - event/*
+    paths-ignore:
+      - "**.md"
+      #- "**.yml"
+
+  workflow_dispatch:
 
 jobs:
   setup:
@@ -61,6 +51,7 @@ jobs:
           fi
           echo "Name: $GITHUB_REF_NAME Base: $GITHUB_BASE_REF Ref: $GITHUB_REF"
           echo "${{matrix.arch}}=$TARGETS" >> $GITHUB_OUTPUT
+          echo "$TARGETS" >> $GITHUB_STEP_SUMMARY
     outputs:
       all: ${{ steps.jsonStep.outputs.all }}
       check: ${{ steps.jsonStep.outputs.check }}
@@ -83,12 +74,12 @@ jobs:
   check:
     needs: setup
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         check: ${{ fromJson(needs.setup.outputs.check) }}
 
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'workflow_dispatch' }}
+    if: ${{ github.event_name != 'workflow_dispatch' && github.repository == 'meshtastic/firmware' }}
     steps:
       - uses: actions/checkout@v5
       - name: Build base
@@ -100,6 +91,7 @@ jobs:
   build:
     needs: [setup, version]
     strategy:
+      fail-fast: false
       matrix:
         build: ${{ fromJson(needs.setup.outputs.all) }}
     uses: ./.github/workflows/build_firmware.yml
@@ -117,14 +109,14 @@ jobs:
     secrets: inherit
 
   package-pio-deps-native-tft:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.repository == 'meshtastic/firmware' && github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/package_pio_deps.yml
     with:
       pio_env: native-tft
     secrets: inherit
 
   test-native:
-    if: ${{ !contains(github.ref_name, 'event/') }}
+    if: ${{ !contains(github.ref_name, 'event/') && github.repository == 'meshtastic/firmware' }}
     uses: ./.github/workflows/test_native.yml
 
   docker:
@@ -151,6 +143,7 @@ jobs:
 
   gather-artifacts:
     # trunk-ignore(checkov/CKV2_GHA_1)
+    if: github.repository == 'meshtastic/firmware'
     permissions:
       contents: write
       pull-requests: write
@@ -166,79 +159,7 @@ jobs:
           - rp2040
           - rp2350
           - stm32
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
     runs-on: ubuntu-latest
-=======
-
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.x
-          cache: pip
-      - run: pip install -U platformio
-      - name: Generate matrix
-        id: jsonStep
-        run: |
-          TARGETS=$(./bin/generate_ci_matrix.py ${{matrix.arch}} --level extra)
-          echo "Name: $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY
-          echo "Base: $GITHUB_BASE_REF" >> $GITHUB_STEP_SUMMARY
-          echo "Arch: ${{matrix.arch}}" >> $GITHUB_STEP_SUMMARY
-          echo "Ref: $GITHUB_REF" >> $GITHUB_STEP_SUMMARY
-          echo "Targets:" >> $GITHUB_STEP_SUMMARY
-          echo $TARGETS >> $GITHUB_STEP_SUMMARY
-
-  version:
-    if: ${{ inputs.target != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Get release version string
-        run: |
-          echo "long=$(./bin/buildinfo.py long)" >> $GITHUB_OUTPUT
-          echo "deb=$(./bin/buildinfo.py deb)" >> $GITHUB_OUTPUT
-        id: version
-        env:
-          BUILD_LOCATION: local
-    outputs:
-      long: ${{ steps.version.outputs.long }}
-      deb: ${{ steps.version.outputs.deb }}
-
-  build:
-    if: ${{ inputs.target != '' && inputs.arch != 'native' }}
-    needs: [version]
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: ${{ inputs.arch }}
-
-  build-debian-src:
-    if: ${{ github.repository == 'meshtastic/firmware' && inputs.arch == 'native' }}
-    uses: ./.github/workflows/build_debian_src.yml
-    with:
-      series: UNRELEASED
-      build_location: local
-    secrets: inherit
-
-  package-pio-deps-native-tft:
-    if: ${{ inputs.arch == 'native' }}
-    uses: ./.github/workflows/package_pio_deps.yml
-    with:
-      pio_env: native-tft
-    secrets: inherit
-
-  test-native:
-    if: ${{ !contains(github.ref_name, 'event/') && github.event_name != 'workflow_dispatch' ||  !contains(github.ref_name, 'event/') && inputs.arch == 'native' && inputs.target != '' }}
-    uses: ./.github/workflows/test_native.yml
-
-  gather-artifacts:
-    permissions:
-      contents: write
-      pull-requests: write
-    runs-on: ubuntu-latest
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
     needs: [version, build]
     steps:
       - name: Checkout code
@@ -247,17 +168,10 @@ jobs:
           ref: ${{github.event.pull_request.head.ref}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
 
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
-      - uses: actions/download-artifact@v6
-        with:
-          path: ./
-          pattern: firmware-${{matrix.arch}}-*
-=======
       - uses: actions/download-artifact@v5
         with:
           path: ./
-          pattern: firmware-*-*
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
+          pattern: firmware-${{matrix.arch}}-*
           merge-multiple: true
 
       - name: Display structure of downloaded files
@@ -267,13 +181,9 @@ jobs:
         run: mv -b -t ./ ./bin/device-*.sh ./bin/device-*.bat
 
       - name: Repackage in single firmware zip
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
           name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
-=======
-          name: firmware-${{inputs.target}}-${{ needs.version.outputs.long }}
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
           overwrite: true
           path: |
             ./firmware-*.bin
@@ -287,15 +197,9 @@ jobs:
             ./Meshtastic_nRF52_factory_erase*.uf2
           retention-days: 30
 
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
-      - uses: actions/download-artifact@v6
-        with:
-          name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
-=======
       - uses: actions/download-artifact@v5
         with:
-          pattern: firmware-*-${{ needs.version.outputs.long }}
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
+          name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           merge-multiple: true
           path: ./output
 
@@ -309,20 +213,12 @@ jobs:
           chmod +x ./output/device-update.sh
 
       - name: Zip firmware
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
         run: zip -j -9 -r ./firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip ./output
-=======
-        run: zip -j -9 -r ./firmware-${{inputs.target}}-${{ needs.version.outputs.long }}.zip ./output
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
 
       - name: Repackage in single elfs zip
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
           name: debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
-=======
-          name: debug-elfs-${{inputs.target}}-${{ needs.version.outputs.long }}.zip
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
           overwrite: true
           path: ./*.elf
           retention-days: 30
@@ -330,14 +226,13 @@ jobs:
       - uses: scruplelesswizard/comment-artifact@main
         if: ${{ github.event_name == 'pull_request' }}
         with:
-<<<<<<< HEAD:.github/workflows/merge_queue.yml
           name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           description: "Download firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip. This artifact will be available for 90 days from creation"
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release-artifacts:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'meshtastic/firmware' }}
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     needs:
@@ -366,14 +261,14 @@ jobs:
             Autogenerated by github action, developer should edit as required before publishing...
 
       - name: Download source deb
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v5
         with:
           pattern: firmware-debian-${{ needs.version.outputs.deb }}~UNRELEASED-src
           merge-multiple: true
           path: ./output/debian-src
 
       - name: Download `native-tft` pio deps
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v5
         with:
           pattern: platformio-deps-native-tft-${{ needs.version.outputs.long }}
           merge-multiple: true
@@ -412,7 +307,7 @@ jobs:
           - rp2350
           - stm32
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'meshtastic/firmware'}}
     needs: [release-artifacts, version]
     steps:
       - name: Checkout
@@ -423,7 +318,7 @@ jobs:
         with:
           python-version: 3.x
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v5
         with:
           pattern: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           merge-multiple: true
@@ -440,7 +335,7 @@ jobs:
       - name: Zip firmware
         run: zip -j -9 -r ./firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip ./output
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v5
         with:
           name: debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
           merge-multiple: true
@@ -478,7 +373,7 @@ jobs:
         with:
           python-version: 3.x
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v5
         with:
           pattern: firmware-{${{ env.targets }}}-${{ needs.version.outputs.long }}
           merge-multiple: true
@@ -500,8 +395,3 @@ jobs:
           user_email: github-actions[bot]@users.noreply.github.com
           commit_message: ${{ needs.version.outputs.long }}
           enable_jekyll: true
-=======
-          name: firmware-${{inputs.target}}-${{ needs.version.outputs.long }}
-          description: "Download firmware-${{inputs.target}}-${{ needs.version.outputs.long }}.zip. This artifact will be available for 90 days from creation"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
->>>>>>> 8f41df7f9b209c31129008d28cc0e3373bca388d:.github/workflows/build_one_target.yml
