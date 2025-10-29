@@ -1,32 +1,131 @@
-name: Build One Target
-
+name: Merge Queue
+# Not sure how concurrency works in merge_queue, removing for now.
+# concurrency:
+#   group: merge-queue-${{ github.head_ref || github.run_id }}
+#   cancel-in-progress: true
 on:
-  workflow_dispatch:
-    inputs:
-      arch:
-        type: choice
-        options:
-          - esp32
-          - esp32s3
-          - esp32c3
-          - esp32c6
-          - nrf52840
-          - rp2040
-          - rp2350
-          - stm32
-          - native
-      target:
-        type: string
-        required: false
-        description: 'choose the target board, e.g. nrf52_promicro_diy_tcxo. If blank, will find available targets.'
+  # Merge group is a special trigger that is used to trigger the workflow when a merge group is created.
+  merge_group:
 
-      # find-target:
-      #   type: boolean
-      #   default: true
-      #   description: 'Find the available targets'
 jobs:
-  find-targets:
-    if: ${{ inputs.target == '' }}
+  setup:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch:
+          - all
+          - check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.x
+          cache: pip
+      - run: pip install -U platformio
+      - name: Generate matrix
+        id: jsonStep
+        run: |
+          if [[ "$GITHUB_HEAD_REF" == "" ]]; then
+            TARGETS=$(./bin/generate_ci_matrix.py ${{matrix.arch}})
+          else  
+            TARGETS=$(./bin/generate_ci_matrix.py ${{matrix.arch}} --level pr)
+          fi
+          echo "Name: $GITHUB_REF_NAME Base: $GITHUB_BASE_REF Ref: $GITHUB_REF"
+          echo "${{matrix.arch}}=$TARGETS" >> $GITHUB_OUTPUT
+    outputs:
+      all: ${{ steps.jsonStep.outputs.all }}
+      check: ${{ steps.jsonStep.outputs.check }}
+
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Get release version string
+        run: |
+          echo "long=$(./bin/buildinfo.py long)" >> $GITHUB_OUTPUT
+          echo "deb=$(./bin/buildinfo.py deb)" >> $GITHUB_OUTPUT
+        id: version
+        env:
+          BUILD_LOCATION: local
+    outputs:
+      long: ${{ steps.version.outputs.long }}
+      deb: ${{ steps.version.outputs.deb }}
+
+  check:
+    needs: setup
+    strategy:
+      fail-fast: true
+      matrix:
+        check: ${{ fromJson(needs.setup.outputs.check) }}
+
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build base
+        id: base
+        uses: ./.github/actions/setup-base
+      - name: Check ${{ matrix.check.board }}
+        run: bin/check-all.sh ${{ matrix.check.board }}
+
+  build:
+    needs: [setup, version]
+    strategy:
+      matrix:
+        build: ${{ fromJson(needs.setup.outputs.all) }}
+    uses: ./.github/workflows/build_firmware.yml
+    with:
+      version: ${{ needs.version.outputs.long }}
+      pio_env: ${{ matrix.build.board }}
+      platform: ${{ matrix.build.platform }}
+
+  build-debian-src:
+    if: github.repository == 'meshtastic/firmware'
+    uses: ./.github/workflows/build_debian_src.yml
+    with:
+      series: UNRELEASED
+      build_location: local
+    secrets: inherit
+
+  package-pio-deps-native-tft:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    uses: ./.github/workflows/package_pio_deps.yml
+    with:
+      pio_env: native-tft
+    secrets: inherit
+
+  test-native:
+    if: ${{ !contains(github.ref_name, 'event/') }}
+    uses: ./.github/workflows/test_native.yml
+
+  docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [debian, alpine]
+        platform: [linux/amd64, linux/arm64, linux/arm/v7]
+        pio_env: [native, native-tft]
+        exclude:
+          - distro: alpine
+            platform: linux/arm/v7
+          - pio_env: native-tft
+            platform: linux/arm64
+          - pio_env: native-tft
+            platform: linux/arm/v7
+    uses: ./.github/workflows/docker_build.yml
+    with:
+      distro: ${{ matrix.distro }}
+      platform: ${{ matrix.platform }}
+      runs-on: ${{ contains(matrix.platform, 'arm') && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+      pio_env: ${{ matrix.pio_env }}
+      push: false
+
+  gather-artifacts:
+    # trunk-ignore(checkov/CKV2_GHA_1)
+    permissions:
+      contents: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix:
@@ -39,155 +138,19 @@ jobs:
           - rp2040
           - rp2350
           - stm32
-
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-          cache: pip
-      - run: pip install -U platformio
-      - name: Generate matrix
-        id: jsonStep
-        run: |
-          TARGETS=$(./bin/generate_ci_matrix.py ${{matrix.arch}} extra)
-          echo "Name: $GITHUB_REF_NAME" >> $GITHUB_STEP_SUMMARY
-          echo "Base: $GITHUB_BASE_REF" >> $GITHUB_STEP_SUMMARY
-          echo "Arch: ${{matrix.arch}}" >> $GITHUB_STEP_SUMMARY
-          echo "Ref: $GITHUB_REF" >> $GITHUB_STEP_SUMMARY
-          echo "Targets:" >> $GITHUB_STEP_SUMMARY
-          echo $TARGETS | sed 's/[][]//g; s/", "/\n- /g; s/"//g; s/^/- /' >> $GITHUB_STEP_SUMMARY
-
-
-
-
-
-  version:
-    if: ${{ inputs.target != '' }}
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Get release version string
-        run: |
-          echo "long=$(./bin/buildinfo.py long)" >> $GITHUB_OUTPUT
-          echo "deb=$(./bin/buildinfo.py deb)" >> $GITHUB_OUTPUT
-        id: version
-        env:
-          BUILD_LOCATION: local
-    outputs:
-      long: ${{ steps.version.outputs.long }}
-      deb: ${{ steps.version.outputs.deb }}
-
-  build-arch:
-    if: ${{ inputs.target != '' && inputs.arch != 'native' }}
-    needs: [version]
-    strategy:
-      fail-fast: false
-    uses: ./.github/workflows/build_firmware.yml
-    with:
-      version: ${{ needs.version.outputs.long }}
-      pio_env: ${{ inputs.target }}
-      platform: ${{ inputs.arch }}
-
-  build-debian-src:
-    if: ${{ github.repository == 'meshtastic/firmware' && inputs.arch == 'native' }}
-    uses: ./.github/workflows/build_debian_src.yml
-    with:
-      series: UNRELEASED
-      build_location: local
-    secrets: inherit
-
-  package-pio-deps-native-tft:
-    if: ${{ inputs.arch == 'native' }}
-    uses: ./.github/workflows/package_pio_deps.yml
-    with:
-      pio_env: native-tft
-    secrets: inherit
-
-  test-native:
-    if: ${{ !contains(github.ref_name, 'event/') && github.event_name != 'workflow_dispatch' ||  !contains(github.ref_name, 'event/') && inputs.arch == 'native' && inputs.target != '' }}
-    uses: ./.github/workflows/test_native.yml
-
-  docker-deb-amd64:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: debian
-      platform: linux/amd64
-      runs-on: ubuntu-24.04
-      push: false
-
-  docker-deb-amd64-tft:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: debian
-      platform: linux/amd64
-      runs-on: ubuntu-24.04
-      push: false
-      pio_env: native-tft
-
-  docker-alp-amd64:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: alpine
-      platform: linux/amd64
-      runs-on: ubuntu-24.04
-      push: false
-
-  docker-alp-amd64-tft:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: alpine
-      platform: linux/amd64
-      runs-on: ubuntu-24.04
-      push: false
-      pio_env: native-tft
-
-  docker-deb-arm64:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: debian
-      platform: linux/arm64
-      runs-on: ubuntu-24.04-arm
-      push: false
-
-  docker-deb-armv7:
-    if: ${{ inputs.target != '' && inputs.arch ==  'native' }}
-    uses: ./.github/workflows/docker_build.yml
-    with:
-      distro: debian
-      platform: linux/arm/v7
-      runs-on: ubuntu-24.04-arm
-      push: false
-
-  gather-artifacts:
-    permissions:
-      contents: write
-      pull-requests: write
-    strategy:
-      fail-fast: false
-    runs-on: ubuntu-latest
-    needs:
-      [
-        version,
-        build-arch,
-      ]
+    needs: [version, build]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{github.event.pull_request.head.ref}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: ./
-          pattern: firmware-${{inputs.arch}}-*
+          pattern: firmware-${{matrix.arch}}-*
           merge-multiple: true
 
       - name: Display structure of downloaded files
@@ -197,9 +160,9 @@ jobs:
         run: mv -b -t ./ ./bin/device-*.sh ./bin/device-*.bat
 
       - name: Repackage in single firmware zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}
+          name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           overwrite: true
           path: |
             ./firmware-*.bin
@@ -213,9 +176,9 @@ jobs:
             ./Meshtastic_nRF52_factory_erase*.uf2
           retention-days: 30
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
-          name: firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}
+          name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           merge-multiple: true
           path: ./output
 
@@ -229,12 +192,12 @@ jobs:
           chmod +x ./output/device-update.sh
 
       - name: Zip firmware
-        run: zip -j -9 -r ./firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip ./output
+        run: zip -j -9 -r ./firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip ./output
 
       - name: Repackage in single elfs zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: debug-elfs-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip
+          name: debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
           overwrite: true
           path: ./*.elf
           retention-days: 30
@@ -242,13 +205,13 @@ jobs:
       - uses: scruplelesswizard/comment-artifact@main
         if: ${{ github.event_name == 'pull_request' }}
         with:
-          name: firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}
-          description: "Download firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip. This artifact will be available for 90 days from creation"
+          name: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
+          description: "Download firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip. This artifact will be available for 90 days from creation"
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release-artifacts:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.target != ''}}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     needs:
@@ -258,10 +221,10 @@ jobs:
       - package-pio-deps-native-tft
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.x
 
@@ -277,14 +240,14 @@ jobs:
             Autogenerated by github action, developer should edit as required before publishing...
 
       - name: Download source deb
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: firmware-debian-${{ needs.version.outputs.deb }}~UNRELEASED-src
           merge-multiple: true
           path: ./output/debian-src
 
       - name: Download `native-tft` pio deps
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: platformio-deps-native-tft-${{ needs.version.outputs.long }}
           merge-multiple: true
@@ -312,21 +275,31 @@ jobs:
   release-firmware:
     strategy:
       fail-fast: false
+      matrix:
+        arch:
+          - esp32
+          - esp32s3
+          - esp32c3
+          - esp32c6
+          - nrf52840
+          - rp2040
+          - rp2350
+          - stm32
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.target != ''}}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: [release-artifacts, version]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.x
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
-          pattern: firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}
+          pattern: firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}
           merge-multiple: true
           path: ./output
 
@@ -339,16 +312,16 @@ jobs:
           chmod +x ./output/device-update.sh
 
       - name: Zip firmware
-        run: zip -j -9 -r ./firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip ./output
+        run: zip -j -9 -r ./firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip ./output
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
-          name: debug-elfs-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip
+          name: debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
           merge-multiple: true
           path: ./elfs
 
       - name: Zip debug elfs
-        run: zip -j -9 -r ./debug-elfs-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip ./elfs
+        run: zip -j -9 -r ./debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip ./elfs
 
       # For diagnostics
       - name: Display structure of downloaded files
@@ -358,28 +331,28 @@ jobs:
         # Only run when targeting master branch with workflow_dispatch
         if: ${{ github.ref_name == 'master' }}
         run: |
-          gh release upload v${{ needs.version.outputs.long }} ./firmware-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip
-          gh release upload v${{ needs.version.outputs.long }} ./debug-elfs-${{inputs.arch}}-${{ needs.version.outputs.long }}.zip
+          gh release upload v${{ needs.version.outputs.long }} ./firmware-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
+          gh release upload v${{ needs.version.outputs.long }} ./debug-elfs-${{matrix.arch}}-${{ needs.version.outputs.long }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-firmware:
     runs-on: ubuntu-24.04
-    if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'meshtastic/firmware' && inputs.target != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: [release-firmware, version]
     env:
       targets: |-
         esp32,esp32s3,esp32c3,esp32c6,nrf52840,rp2040,rp2350,stm32
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.x
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           pattern: firmware-{${{ env.targets }}}-${{ needs.version.outputs.long }}
           merge-multiple: true
