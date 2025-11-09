@@ -25,7 +25,7 @@
 #define GPS_RX_PIN 18
 #define GPS_TX_PIN 17
 
-#define HAS_SDCARD 1
+//#define HAS_SDCARD 1
 #define SPI_MOSI 13
 #define SPI_SCK 12
 #define SPI_MISO 11
